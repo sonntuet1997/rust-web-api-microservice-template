@@ -1,0 +1,5 @@
+service_name = "rust-grpc-server"
+exporter_endpoint = "http://localhost:7281"
+
+[servers.gpt_answer_service]
+url = "0.0.0.0:50051"

@@ -1,11 +1,9 @@
 use rust_core::common::errors::CoreError;
 use tonic::transport::Channel;
 
-use gpt_answer::gpt_answer_service_client::GptAnswerServiceClient;
-
-mod gpt_answer {
-    tonic::include_proto!("gpt_answer");
-}
+use grpc_interface::interfaces::gpt_answer::gpt_answer::{
+    gpt_answer_service_client::GptAnswerServiceClient, GetAnswerPayload,
+};
 
 pub struct GptAnswerGrpcClient {
     client: GptAnswerServiceClient<Channel>,
@@ -17,10 +15,9 @@ impl GptAnswerGrpcClient {
         Self { client }
     }
 
-    pub async fn get_instance() -> Result<Self, CoreError> {
-        let uri = "http://0.0.0.0:50051";
+    pub async fn get_instance(uri: &'static str) -> Result<Self, CoreError> {
         let channel = Channel::from_static(uri).connect().await.map_err(|err| {
-            println!("Error connecting to GPT: {:?}", err);
+            eprintln!("Error connecting to GPT: {:?}", err);
             CoreError::InternalError
         })?;
 
@@ -29,12 +26,12 @@ impl GptAnswerGrpcClient {
     }
 
     pub async fn get_answer(&mut self, question: &str) -> Result<String, CoreError> {
-        let request = tonic::Request::new(gpt_answer::GetAnswerPayload {
+        let request = tonic::Request::new(GetAnswerPayload {
             question: question.to_string(),
         });
 
         let response = self.client.get_answer(request).await.map_err(|err| {
-            println!("Error getting answer from GPT: {:?}", err);
+            eprintln!("Error getting answer from GPT: {:?}", err);
             CoreError::InternalError
         })?;
 

@@ -103,7 +103,7 @@ version = "1.0.57"
 [dependencies.anyhow]
 version = "1.0.80"
 
-[dependencies.grpc_client]
+[dependencies.grpc_interface]
 path = "../grpc"
 
 [lib]

@@ -37,7 +37,8 @@ impl QuestionPort for QuestionDBRepository {
             .await
             .unwrap()
             .interact(move |conn| {
-                let question = QuestionModel::from(question).unwrap();
+                let question =
+                    QuestionModel::try_from(question).map_err(|_| CoreError::InternalError)?;
                 let response = insert_into(questions)
                     .values(&question)
                     .get_result::<QuestionModel>(conn)
@@ -46,7 +47,7 @@ impl QuestionPort for QuestionDBRepository {
                         _ => CoreError::InternalError,
                     })
                     .unwrap();
-                Ok(response.to_entity().unwrap())
+                Ok(response.into())
             })
             .await
             .unwrap()
@@ -58,7 +59,8 @@ impl QuestionPort for QuestionDBRepository {
             .await
             .unwrap()
             .interact(move |conn| {
-                let question = QuestionModel::from(question)?;
+                let question =
+                    QuestionModel::try_from(question).map_err(|_| CoreError::InternalError)?;
                 let response = update(questions.filter(id.eq(question.id)))
                     .set(&question)
                     .get_result::<QuestionModel>(conn)
@@ -66,7 +68,7 @@ impl QuestionPort for QuestionDBRepository {
                         diesel::result::Error::NotFound => CoreError::NotFound,
                         _ => CoreError::InternalError,
                     })?
-                    .to_entity()?;
+                    .into();
 
                 Ok(response)
             })
@@ -109,7 +111,7 @@ impl QuestionPort for QuestionDBRepository {
                         diesel::result::Error::NotFound => CoreError::NotFound,
                         _ => CoreError::InternalError,
                     })?
-                    .to_entity()?;
+                    .into();
 
                 Ok(response)
             })
@@ -136,7 +138,7 @@ impl QuestionPort for QuestionDBRepository {
 
                 Ok(question_list
                     .into_iter()
-                    .map(|l| l.to_entity().unwrap())
+                    .map(|l| l.into())
                     .collect::<Vec<_>>())
             })
             .await

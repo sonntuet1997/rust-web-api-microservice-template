@@ -43,3 +43,9 @@ features = ["full"]
 
 [dependencies.anyhow]
 version = "1.0.80"
+
+[dependencies.tonic]
+version = "0.11.0"
+
+[dependencies.grpc_interface]
+path = "../grpc"

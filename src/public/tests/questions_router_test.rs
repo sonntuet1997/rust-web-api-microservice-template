@@ -15,7 +15,10 @@ mod tests {
         in_memory::question::QuestionInMemoryRepository,
         postgres::question_db::{QuestionDBRepository, MIGRATIONS},
     };
-    use cli::router::Router;
+    use cli::{
+        options::{GrpcClients, ServiceServer},
+        router::Router,
+    };
     use rust_core::{
         entities::question::{QuestionEntity, QuestionId},
         ports::question::QuestionPort,
@@ -30,7 +33,13 @@ mod tests {
     where
         T: QuestionPort + Send + Sync + 'static,
     {
-        let router = Router::new(question_port);
+        let server_config: GrpcClients = GrpcClients {
+            gpt_answer_service: Some(ServiceServer {
+                url: "http://localhost:50051".to_string(),
+            }),
+        };
+
+        let router = Router::new(question_port, Arc::new(server_config));
         let routers = router.routes();
 
         let raw_question_id: String = rand::thread_rng().gen_range(1..=1000).to_string();

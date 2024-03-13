@@ -1,0 +1,17 @@
+name: Docker build
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-docker-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out from Git
+        uses: actions/checkout@v4
+
+      - name: Build docker image
+        run: |
+          docker build .

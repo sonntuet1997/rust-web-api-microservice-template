@@ -3,6 +3,7 @@
 FROM clux/muslrust:stable AS chef
 USER root
 RUN cargo install cargo-chef
+
 WORKDIR /app
 
 FROM clux/muslrust:stable AS bunyan
@@ -16,7 +17,7 @@ FROM chef AS builder
 COPY --from=planner /app/recipe.json recipe.json
 RUN cargo chef cook --release --recipe-path recipe.json
 COPY . .
-RUN cargo build --release --bin cli
+RUN cargo build --release --all
 RUN mv target/${CARGO_BUILD_TARGET}/release /out
 
 FROM scratch AS prod

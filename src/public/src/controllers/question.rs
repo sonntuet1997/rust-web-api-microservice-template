@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 
+use adapter::repositories::grpc::models::gpt_answer::GptAnswerGrpcClient;
 use tracing::instrument;
 use warp::http::StatusCode;
 use warp::reject::Rejection;
@@ -11,9 +12,8 @@ use rust_core::entities::question::{QuestionEntity, QuestionId};
 use rust_core::entities::question_filter::QuestionFilter;
 use rust_core::ports::question::QuestionPort;
 
-use grpc_client::grpc_client::gpt_answer::GptAnswerGrpcClient;
-
 use crate::errors::WarpError;
+use crate::options::GrpcClients;
 
 /// Handler for retrieving questions based on query parameters.
 ///
@@ -23,14 +23,15 @@ use crate::errors::WarpError;
 #[instrument(level = "info", skip(question_port))]
 pub async fn get_questions(
     question_port: Arc<dyn QuestionPort + Send + Sync>,
+    server_config: Arc<GrpcClients>,
     query: HashMap<String, String>,
 ) -> Result<impl Reply, Rejection> {
-    let question_filter = QuestionFilter::from_query(&query).map_err(|err| WarpError::from(err))?;
+    let question_filter = QuestionFilter::from_query(&query).map_err(WarpError::from)?;
 
     let questions = question_port
         .list(&question_filter)
         .await
-        .map_err(|err| WarpError::from(err))?;
+        .map_err(WarpError::from)?;
 
     Ok(warp::reply::json(&questions))
 }
@@ -43,14 +44,15 @@ pub async fn get_questions(
 #[instrument(level = "info", skip(question_port))]
 pub async fn get_question(
     question_port: Arc<dyn QuestionPort + Send + Sync>,
+    server_config: Arc<GrpcClients>,
     id: String,
 ) -> Result<impl Reply, Rejection> {
-    let question_id = QuestionId::from_str(id.as_str()).map_err(|err| WarpError::from(err))?;
+    let question_id = QuestionId::from_str(id.as_str()).map_err(WarpError::from)?;
 
     let question = question_port
         .get(&question_id)
         .await
-        .map_err(|err| WarpError::from(err))?;
+        .map_err(WarpError::from)?;
 
     Ok(warp::reply::json(&question))
 }
@@ -63,12 +65,10 @@ pub async fn get_question(
 #[instrument(level = "info", skip(question_port))]
 pub async fn add_question(
     question_port: Arc<dyn QuestionPort + Send + Sync>,
+    server_config: Arc<GrpcClients>,
     question: QuestionEntity,
 ) -> Result<impl Reply, Rejection> {
-    question_port
-        .add(question)
-        .await
-        .map_err(|err| WarpError::from(err))?;
+    question_port.add(question).await.map_err(WarpError::from)?;
 
     Ok(warp::reply::with_status("Question added", StatusCode::OK))
 }
@@ -81,14 +81,15 @@ pub async fn add_question(
 #[instrument(level = "info", skip(question_port))]
 pub async fn delete_question(
     question_port: Arc<dyn QuestionPort + Send + Sync>,
+    server_config: Arc<GrpcClients>,
     id: String,
 ) -> Result<impl Reply, Rejection> {
-    let question_id = QuestionId::from_str(id.as_str()).map_err(|err| WarpError::from(err))?;
+    let question_id = QuestionId::from_str(id.as_str()).map_err(WarpError::from)?;
 
     question_port
         .delete(&question_id)
         .await
-        .map_err(|err| WarpError::from(err))?;
+        .map_err(WarpError::from)?;
 
     Ok(warp::reply::with_status("Question deleted", StatusCode::OK))
 }
@@ -102,16 +103,17 @@ pub async fn delete_question(
 #[instrument(level = "info", skip(question_port))]
 pub async fn update_question(
     question_port: Arc<dyn QuestionPort + Send + Sync>,
+    server_config: Arc<GrpcClients>,
     id: String,
     mut question: QuestionEntity,
 ) -> Result<impl Reply, Rejection> {
-    let question_id = QuestionId::from_str(id.as_str()).map_err(|err| WarpError::from(err))?;
+    let question_id = QuestionId::from_str(id.as_str()).map_err(WarpError::from)?;
     question.id = question_id;
 
     question_port
         .update(question)
         .await
-        .map_err(|err| WarpError::from(err))?;
+        .map_err(WarpError::from)?;
 
     Ok(warp::reply::with_status("Question updated", StatusCode::OK))
 }
@@ -136,20 +138,25 @@ pub async fn update_question(
 #[instrument(level = "info", skip(question_port))]
 pub async fn get_question_answer_controller(
     question_port: Arc<dyn QuestionPort + Send + Sync>,
+    server_config: Arc<GrpcClients>,
     id: String,
 ) -> Result<impl Reply, Rejection> {
     let question = question_port
         .get(&QuestionId::from_str(id.as_str()).unwrap())
         .await
-        .map_err(|err| WarpError::from(err))?;
+        .map_err(WarpError::from)?;
 
-    let client = GptAnswerGrpcClient::get_instance().await;
+    // Clone the gpt_client string to have a static lifetime
+    let gpt_client = server_config.gpt_answer_service.clone().unwrap().url;
+
+    // Use the cloned gpt_client string
+    let client = GptAnswerGrpcClient::get_instance(gpt_client.leak()).await;
 
     let answer = client
         .unwrap()
         .get_answer(&question.content)
         .await
-        .map_err(|err| WarpError::from(err))?;
+        .map_err(WarpError::from)?;
 
     Ok(warp::reply::with_status(answer, StatusCode::OK))
 }

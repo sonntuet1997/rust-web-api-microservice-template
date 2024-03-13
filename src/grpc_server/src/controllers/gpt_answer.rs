@@ -1,10 +1,11 @@
-use gpt_answer::gpt_answer_service_server::{GptAnswerService, GptAnswerServiceServer};
-use gpt_answer::{GetAnswerPayload, GetAnswerResponse};
+use grpc_interface::interfaces::gpt_answer::gpt_answer::gpt_answer_service_server::{
+    GptAnswerService, GptAnswerServiceServer,
+};
+use grpc_interface::interfaces::gpt_answer::gpt_answer::{GetAnswerPayload, GetAnswerResponse};
+use rust_core::common::errors::CoreError;
 use tonic::{transport::Server, Request, Response, Status};
 
-mod gpt_answer {
-    tonic::include_proto!("gpt_answer");
-}
+use crate::options::Options;
 
 #[derive(Debug, Default)]
 pub struct GptAnswerServer;
@@ -24,9 +25,11 @@ impl GptAnswerService for GptAnswerServer {
     }
 }
 
-pub async fn init_gpt_answer_server() {
-    let result = "0.0.0.0:50051".parse().map_err(|err| {
-        println!("Error: {:?}", err);
+pub async fn init_gpt_answer_server(options: Options) {
+    let gpt_answer_config = options.servers.gpt_answer_service.clone().unwrap();
+    let result = gpt_answer_config.url.parse().map_err(|err| {
+        eprintln!("Error: {:?}", err);
+        CoreError::InternalError
     });
 
     if result.is_ok() {
@@ -44,6 +47,6 @@ pub async fn init_gpt_answer_server() {
 
         println!("GPT Answer server started at {}", addr);
     } else {
-        println!("GPT Answer server failed to start");
+        eprintln!("GPT Answer server failed to start");
     }
 }

@@ -4,7 +4,7 @@ test = []
 example = []
 
 [package]
-name = "grpc_interface"
+name = "grpc_server"
 edition = "2021"
 version = "0.0.1"
 autobins = true
@@ -18,14 +18,42 @@ version = "0.11.0"
 [dependencies.prost]
 version = "0.12.3"
 
+[dependencies.rust_core]
+path = "../core"
+
+[dependencies.serde]
+version = "1.0"
+features = ["derive"]
+
+[dependencies.clap]
+version = "4.4.7"
+features = ["derive"]
+
+[dependencies.tokio]
+version = "1.36.0"
+features = ["full"]
+
+[dependencies.opentelemetry]
+version = "0.22.0"
+
+[dependencies]
+serde_json = "1.0"
+readonly = "0.2.12"
+tracing = "0.1"
+
+[dependencies.common]
+path = "../common"
+
+[dependencies.grpc_interface]
+path = "../grpc"
+
 [build-dependencies]
 tonic-build = "0.11.0"
-glob = "0.3.1"
 
 
 [lib]
 path = "src/lib.rs"
-name = "grpc_interface"
+name = "grpc_server"
 test = true
 doctest = true
 bench = true

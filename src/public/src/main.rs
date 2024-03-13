@@ -1,4 +1,3 @@
-#[rustfmt::skip]
 #[cfg_attr(debug_assertions, allow(dead_code, unused_imports))]
 use openssl;
 #[rustfmt::skip]
@@ -22,8 +21,6 @@ use cli::router::Router;
 use common::loggers::telemetry::init_telemetry;
 use common::options::parse_options;
 use rust_core::ports::question::QuestionPort;
-
-use grpc_client::grpc_server::gpt_answer::init_gpt_answer_server;
 
 #[tokio::main]
 async fn main() {
@@ -52,9 +49,8 @@ async fn main() {
         options.log.level.as_str(),
     );
 
-    let grpc_server = tokio::spawn(init_gpt_answer_server());
     let warp_server = tokio::spawn(run_warp_server(options));
-    tokio::try_join!(grpc_server, warp_server).expect("Failed to run servers");
+    tokio::try_join!(warp_server).expect("Failed to run servers");
 
     global::shutdown_tracer_provider();
 }
@@ -97,7 +93,8 @@ pub async fn run_warp_server(options: Options) {
         Arc::new(QuestionInMemoryRepository::new())
     };
 
-    let router = Router::new(question_port);
+    let grpc_clients = options.grpc_clients.clone();
+    let router = Router::new(question_port, Arc::new(grpc_clients));
 
     let address = SocketAddrV4::new(
         Ipv4Addr::from_str(options.server.url.as_str()).unwrap(),

@@ -1,7 +1,5 @@
-use serde::Deserialize;
-
-use adapter::repositories::postgres::config::DBConfig;
 use common::options::{default_log, Log};
+use serde::Deserialize;
 
 /// Configuration options for the application.
 ///
@@ -10,12 +8,8 @@ use common::options::{default_log, Log};
 #[readonly::make]
 #[derive(Deserialize, Debug)]
 pub struct Options {
-    /// Configuration for the server.
-    pub server: Server,
-    /// Specifies the backend database will be used.
-    pub grpc_clients: GrpcClients,
-    /// Specifies the backend database will be used.
-    pub db: Database,
+    /// Configuration for the servers.
+    pub servers: GrpcServers,
     /// The endpoint for the exporter.
     pub exporter_endpoint: String,
     /// The name of the service.
@@ -25,31 +19,10 @@ pub struct Options {
     pub log: Log,
 }
 
-/// Represents database configuration options.
+/// Represents servers configuration options.
 #[derive(Deserialize, Debug)]
-pub struct Database {
+pub struct GrpcServers {
     /// Configuration for using in-memory database.
-    pub in_memory: Option<InMemoryDatabase>,
-    /// Configuration for PostgresSQL.
-    pub pg: Option<DBConfig>,
-}
-
-/// Represents in-memory database configuration.
-#[derive(Deserialize, Debug)]
-pub struct InMemoryDatabase {}
-
-/// Represents server configuration.
-#[derive(Debug, Deserialize, Clone)]
-pub struct Server {
-    /// Port number for the server.
-    pub port: u16,
-    /// URL for the server.
-    pub url: String,
-}
-
-/// Represents server configuration.
-#[derive(Debug, Deserialize, Clone)]
-pub struct GrpcClients {
     pub gpt_answer_service: Option<ServiceServer>,
 }
 

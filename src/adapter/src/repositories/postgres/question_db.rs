@@ -1,10 +1,11 @@
 use async_trait::async_trait;
 use deadpool_diesel::postgres::Pool;
-use diesel::{delete, insert_into, QueryDsl, RunQueryDsl, SelectableHelper};
-use diesel::{update, ExpressionMethods};
+use diesel::{
+    delete, insert_into, update, ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper,
+};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations};
 
-use rust_core::common::errors::Error;
+use rust_core::common::errors::CoreError;
 use rust_core::entities::question::{QuestionEntity, QuestionId};
 use rust_core::entities::question_filter::QuestionFilter;
 use rust_core::ports::question::QuestionPort;
@@ -30,49 +31,53 @@ impl QuestionDBRepository {
 
 #[async_trait]
 impl QuestionPort for QuestionDBRepository {
-    async fn add(&self, question: QuestionEntity) -> Result<QuestionEntity, Error> {
+    async fn add(&self, question: QuestionEntity) -> Result<QuestionEntity, CoreError> {
         self.db
             .get()
             .await
             .unwrap()
             .interact(move |conn| {
-                let question = QuestionModel::from(question);
+                let question =
+                    QuestionModel::try_from(question).map_err(|_| CoreError::InternalError)?;
                 let response = insert_into(questions)
                     .values(&question)
                     .get_result::<QuestionModel>(conn)
                     .map_err(|err| match err {
-                        diesel::result::Error::NotFound => Error::NotFound,
-                        _ => Error::InternalError,
-                    });
-                Ok(response.unwrap().to_entity())
+                        diesel::result::Error::NotFound => CoreError::NotFound,
+                        _ => CoreError::InternalError,
+                    })
+                    .unwrap();
+                Ok(response.into())
             })
             .await
             .unwrap()
     }
 
-    async fn update(&self, question: QuestionEntity) -> Result<QuestionEntity, Error> {
+    async fn update(&self, question: QuestionEntity) -> Result<QuestionEntity, CoreError> {
         self.db
             .get()
             .await
             .unwrap()
             .interact(move |conn| {
-                let question = QuestionModel::from(question);
+                let question =
+                    QuestionModel::try_from(question).map_err(|_| CoreError::InternalError)?;
                 let response = update(questions.filter(id.eq(question.id)))
                     .set(&question)
                     .get_result::<QuestionModel>(conn)
                     .map_err(|err| match err {
-                        diesel::result::Error::NotFound => Error::NotFound,
-                        _ => Error::InternalError,
-                    })?;
+                        diesel::result::Error::NotFound => CoreError::NotFound,
+                        _ => CoreError::InternalError,
+                    })?
+                    .into();
 
-                Ok(response.to_entity())
+                Ok(response)
             })
             .await
             .unwrap()
     }
 
-    async fn delete(&self, question_id: &QuestionId) -> Result<(), Error> {
-        let question_id: i32 = question_id.to_string().parse().unwrap();
+    async fn delete(&self, question_id: &QuestionId) -> Result<(), CoreError> {
+        let question_id: i32 = question_id.to_string().parse()?;
         self.db
             .get()
             .await
@@ -81,8 +86,8 @@ impl QuestionPort for QuestionDBRepository {
                 let _ = delete(questions.filter(id.eq(question_id)))
                     .execute(conn)
                     .map_err(|err| match err {
-                        diesel::result::Error::NotFound => Error::NotFound,
-                        _ => Error::InternalError,
+                        diesel::result::Error::NotFound => CoreError::NotFound,
+                        _ => CoreError::InternalError,
                     })?;
 
                 Ok(())
@@ -91,8 +96,8 @@ impl QuestionPort for QuestionDBRepository {
             .unwrap()
     }
 
-    async fn get(&self, question_id: &QuestionId) -> Result<QuestionEntity, Error> {
-        let question_id: i32 = question_id.to_string().parse().unwrap();
+    async fn get(&self, question_id: &QuestionId) -> Result<QuestionEntity, CoreError> {
+        let question_id: i32 = question_id.to_string().parse()?;
         self.db
             .get()
             .await
@@ -103,17 +108,21 @@ impl QuestionPort for QuestionDBRepository {
                     .find(question_id)
                     .first(conn)
                     .map_err(|err| match err {
-                        diesel::result::Error::NotFound => Error::NotFound,
-                        _ => Error::InternalError,
-                    })?;
+                        diesel::result::Error::NotFound => CoreError::NotFound,
+                        _ => CoreError::InternalError,
+                    })?
+                    .into();
 
-                Ok(response.to_entity())
+                Ok(response)
             })
             .await
             .unwrap()
     }
 
-    async fn list(&self, _question_filter: &QuestionFilter) -> Result<Vec<QuestionEntity>, Error> {
+    async fn list(
+        &self,
+        _question_filter: &QuestionFilter,
+    ) -> Result<Vec<QuestionEntity>, CoreError> {
         self.db
             .get()
             .await
@@ -123,13 +132,13 @@ impl QuestionPort for QuestionDBRepository {
                     .select(QuestionModel::as_select())
                     .load(conn)
                     .map_err(|err| match err {
-                        diesel::result::Error::NotFound => Error::NotFound,
-                        _ => Error::InternalError,
+                        diesel::result::Error::NotFound => CoreError::NotFound,
+                        _ => CoreError::InternalError,
                     })?;
 
                 Ok(question_list
                     .into_iter()
-                    .map(|l| l.to_entity())
+                    .map(|l| l.into())
                     .collect::<Vec<_>>())
             })
             .await

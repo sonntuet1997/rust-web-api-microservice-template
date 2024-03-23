@@ -1,0 +1,38 @@
+bin = []
+bench = []
+test = []
+example = []
+
+[package]
+name = "grpc_interface"
+edition = "2021"
+version = "0.0.1"
+autobins = true
+autoexamples = true
+autotests = true
+autobenches = true
+
+[dependencies.tonic]
+version = "0.11.0"
+
+[dependencies.prost]
+version = "0.12.3"
+
+[build-dependencies]
+tonic-build = "0.11.0"
+glob = "0.3.1"
+
+
+[lib]
+path = "src/lib.rs"
+name = "grpc_interface"
+test = true
+doctest = true
+bench = true
+doc = true
+plugin = false
+proc-macro = false
+harness = true
+edition = "2021"
+required-features = []
+crate-type = ["rlib"]

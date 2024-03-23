@@ -96,3 +96,26 @@ features = ["postgres"]
 [dependencies.tokio]
 version = "1.36.0"
 features = ["full"]
+
+[dependencies.thiserror]
+version = "1.0.57"
+
+[dependencies.anyhow]
+version = "1.0.80"
+
+[dependencies.grpc_interface]
+path = "../grpc"
+
+[lib]
+path = "src/lib.rs"
+name = "cli"
+test = true
+doctest = true
+bench = true
+doc = true
+plugin = false
+proc-macro = false
+harness = true
+edition = "2021"
+required-features = []
+crate-type = ["rlib"]

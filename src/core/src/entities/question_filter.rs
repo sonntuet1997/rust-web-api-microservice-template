@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::common::errors::Error;
+use crate::common::errors::CoreError;
 use crate::entities::filter_entity::FilterEntity;
 use crate::entities::pagination_entity::PaginationEntity;
 
@@ -43,7 +43,7 @@ impl QuestionFilter {
     ///     }
     /// }
     /// ```
-    pub fn from_query(query: &HashMap<String, String>) -> Result<Self, Error> {
+    pub fn from_query(query: &HashMap<String, String>) -> Result<Self, CoreError> {
         Ok(QuestionFilter {
             pagination: PaginationEntity::from_query(query)?,
         })
@@ -86,7 +86,7 @@ mod tests {
                 panic!("Expected an error, but got Ok");
             }
             Err(err) => match err {
-                Error::ParseError(_) => {}
+                CoreError::ParseError(_) => {}
                 _ => {
                     panic!("Expected MissingParameters error, but got {:?}", err);
                 }

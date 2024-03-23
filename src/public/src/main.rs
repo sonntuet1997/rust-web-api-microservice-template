@@ -24,30 +24,6 @@ use rust_core::ports::question::QuestionPort;
 
 #[tokio::main]
 async fn main() {
-    run().await
-}
-
-/// Simple REST server.
-#[derive(Parser, Debug)]
-#[command(about, long_about = None)]
-struct Args {
-    #[command(subcommand)]
-    command: Option<Commands>,
-    /// Config file
-    #[arg(short, long, default_value = "config/00-default.toml")]
-    config_path: Vec<String>,
-    /// Print version
-    #[clap(short, long)]
-    version: bool,
-}
-
-#[derive(Subcommand, Clone, Debug)]
-enum Commands {
-    /// Print config
-    Config,
-}
-
-pub async fn run() {
     let args = Args::parse();
     if args.version {
         println!(env!("APP_VERSION"));
@@ -73,12 +49,39 @@ pub async fn run() {
         options.log.level.as_str(),
     );
 
+    let warp_server = tokio::spawn(run_warp_server(options));
+    tokio::try_join!(warp_server).expect("Failed to run servers");
+
+    global::shutdown_tracer_provider();
+}
+
+/// Simple REST server.
+#[derive(Parser, Debug)]
+#[command(about, long_about = None)]
+struct Args {
+    #[command(subcommand)]
+    command: Option<Commands>,
+    /// Config file
+    #[arg(short, long, default_value = "config/00-default.toml")]
+    config_path: Vec<String>,
+    /// Print version
+    #[clap(short, long)]
+    version: bool,
+}
+
+#[derive(Subcommand, Clone, Debug)]
+enum Commands {
+    /// Print config
+    Config,
+}
+
+pub async fn run_warp_server(options: Options) {
     let question_port: Arc<dyn QuestionPort + Send + Sync> = if options.db.in_memory.is_some() {
         info!("Using in-memory database");
         Arc::new(QuestionInMemoryRepository::new())
     } else if options.db.pg.is_some() {
-        info!("Using postgres database");
         let database_config = options.db.pg.clone().unwrap();
+        info!("Using postgres database: {}", database_config.url);
         let manager = Manager::new(database_config.url, Runtime::Tokio1);
         let pool = Pool::builder(manager)
             .max_size(database_config.max_size)
@@ -90,12 +93,12 @@ pub async fn run() {
         Arc::new(QuestionInMemoryRepository::new())
     };
 
-    let router = Router::new(question_port);
+    let grpc_clients = options.grpc_clients.clone();
+    let router = Router::new(question_port, Arc::new(grpc_clients));
 
     let address = SocketAddrV4::new(
         Ipv4Addr::from_str(options.server.url.as_str()).unwrap(),
         options.server.port,
     );
-    warp::serve(router.routes()).run(address).await;
-    global::shutdown_tracer_provider();
+    warp::serve(router.routes()).run(address).await
 }

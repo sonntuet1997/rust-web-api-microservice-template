@@ -2,7 +2,7 @@
 
 diesel::table! {
     questions (id) {
-        id -> Int4,
+        id -> Serial,
         #[max_length = 255]
         title -> Varchar,
         content -> Text,

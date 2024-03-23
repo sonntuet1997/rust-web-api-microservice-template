@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::common::errors::Error;
+use crate::common::errors::CoreError;
 
 /// Represents pagination parameters.
 #[derive(Debug, Serialize, Deserialize)]
@@ -45,17 +45,15 @@ impl PaginationEntity {
     ///     }
     /// }
     /// ```
-    pub fn from_query(query: &HashMap<String, String>) -> Result<Self, Error> {
+    pub fn from_query(query: &HashMap<String, String>) -> Result<Self, CoreError> {
         let start = query
             .get("start")
             .unwrap_or(&"0".to_string())
-            .parse::<usize>()
-            .map_err(Error::ParseError)?;
+            .parse::<usize>()?;
         let end = query
             .get("end")
             .unwrap_or(&"10".to_string())
-            .parse::<usize>()
-            .map_err(Error::ParseError)?;
+            .parse::<usize>()?;
         Ok(PaginationEntity {
             start,
             end,
@@ -93,13 +91,12 @@ mod tests {
         let mut query_params_2 = HashMap::new();
         query_params_2.insert("start".to_string(), "abs".to_string());
         query_params_2.insert("end".to_string(), "10".to_string());
-
         match PaginationEntity::from_query(&query_params_2) {
             Ok(_) => {
                 panic!("Expected an error, but got Ok");
             }
             Err(err) => match err {
-                Error::ParseError(_) => {}
+                CoreError::ParseError(_) => {}
                 _ => {
                     panic!("Expected ParseError error, but got {:?}", err);
                 }

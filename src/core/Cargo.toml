@@ -18,3 +18,9 @@ version = "0.1.77"
 [dependencies.serde]
 version = "1.0"
 features = ["derive"]
+
+[dependencies.thiserror]
+version = "1.0.57"
+
+[dependencies]
+anyhow = "1.0.80"

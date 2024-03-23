@@ -1,0 +1,14 @@
+syntax = "proto3";
+package gpt_answer;
+
+service GptAnswerService {
+  rpc GetAnswer (GetAnswerPayload) returns (GetAnswerResponse);
+}
+
+message GetAnswerPayload {
+  string question = 1;
+}
+
+message GetAnswerResponse {
+  string answer = 1;
+}

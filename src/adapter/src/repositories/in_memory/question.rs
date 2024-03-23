@@ -4,8 +4,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use tokio::sync::RwLock;
 
-use rust_core::common::errors::Error;
-use rust_core::common::errors::Error::NotFound;
+use rust_core::common::errors::CoreError;
 use rust_core::entities::question::{QuestionEntity, QuestionId};
 use rust_core::entities::question_filter::QuestionFilter;
 use rust_core::ports::question::QuestionPort;
@@ -31,7 +30,7 @@ impl QuestionInMemoryRepository {
 
 #[async_trait]
 impl QuestionPort for QuestionInMemoryRepository {
-    async fn add(&self, question: QuestionEntity) -> Result<QuestionEntity, Error> {
+    async fn add(&self, question: QuestionEntity) -> Result<QuestionEntity, CoreError> {
         self.questions
             .write()
             .await
@@ -39,7 +38,7 @@ impl QuestionPort for QuestionInMemoryRepository {
         Ok(question.clone())
     }
 
-    async fn update(&self, question: QuestionEntity) -> Result<QuestionEntity, Error> {
+    async fn update(&self, question: QuestionEntity) -> Result<QuestionEntity, CoreError> {
         self.get(&question.id).await?;
         self.questions
             .write()
@@ -48,22 +47,26 @@ impl QuestionPort for QuestionInMemoryRepository {
         Ok(question.clone())
     }
 
-    async fn delete(&self, question_id: &QuestionId) -> Result<(), Error> {
+    async fn delete(&self, question_id: &QuestionId) -> Result<(), CoreError> {
         self.get(question_id).await?;
         self.questions.write().await.remove(question_id);
         Ok(())
     }
 
-    async fn get(&self, question_id: &QuestionId) -> Result<QuestionEntity, Error> {
-        self.questions
+    async fn get(&self, question_id: &QuestionId) -> Result<QuestionEntity, CoreError> {
+        Ok(self
+            .questions
             .read()
             .await
             .get(question_id)
-            .ok_or(NotFound)
-            .cloned()
+            .ok_or(CoreError::NotFound)?
+            .clone())
     }
 
-    async fn list(&self, question_filter: &QuestionFilter) -> Result<Vec<QuestionEntity>, Error> {
+    async fn list(
+        &self,
+        question_filter: &QuestionFilter,
+    ) -> Result<Vec<QuestionEntity>, CoreError> {
         Ok(self
             .questions
             .read()
